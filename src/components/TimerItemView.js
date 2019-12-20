@@ -69,7 +69,7 @@ export default class TimerItemView extends Component {
     }
 
     countDown() {
-        const {data} = this.props
+        const {data,onComplete} = this.props
 
         // Remove one second, set state so a re-render happens.
         let seconds = this.state.seconds - 1;
@@ -85,6 +85,7 @@ export default class TimerItemView extends Component {
         if (seconds == 0) {
             clearInterval(this.timer);
             data.isComplete = true
+            onComplete()
         }
     }
 
@@ -117,7 +118,7 @@ export default class TimerItemView extends Component {
 
     _renderExpandedView(data) {
 
-        const {onDeleteItem} = {...this.props}
+        const {onDeleteItem,onPause} = {...this.props}
 
         const {isRunning} = this.state
 
@@ -145,6 +146,8 @@ export default class TimerItemView extends Component {
                             });
 
                             data.isRunning = false
+
+                            onPause()
                         }else{
                             this.timer = 0;
                             this.startTimer();
@@ -177,13 +180,17 @@ export default class TimerItemView extends Component {
         const {itemListener,data} = {...this.props}
 
         return (
-            <TouchableOpacity onPress={itemListener}>
+            <TouchableOpacity onPress={() => {
+                if(data.isComplete){
+                    itemListener()
+                }
+            }}>
 
                 <View style={styles.listItem}>
                     <LinearGradient start={{x: 0, y: 0}} end={{x: 1, y: 0}} colors={gradientColor} style={styles.rowGradientStyle}>
                         <View style={styles.rowItemStyle}>
                             <Text style={styles.titleColor}>{data.timerLabel}</Text>
-                            <Text style={styles.hourColor}>{this.addLeadingZeros(this.state.time.h)}:{this.addLeadingZeros(this.state.time.m)}:{this.addLeadingZeros(this.state.time.s)}</Text>
+                            <Text style={styles.hourColor}>{data.isComplete ? data.originalTime :this.addLeadingZeros(this.state.time.h)}:{this.addLeadingZeros(this.state.time.m)}:{this.addLeadingZeros(this.state.time.s)}</Text>
                         </View>
                     </LinearGradient>
                     {this._renderExpandedView(data)}
@@ -237,8 +244,7 @@ const styles = StyleSheet.create({
     },
     rowGradientStyle: {
         borderColor : colors.primaryColor,
-        borderWidth : 1,
-        borderRadius : 20
+        borderRadius : 15
     },
     expandContainerStyle : {
         padding : 16,

@@ -65,19 +65,21 @@ export default class App extends Component {
 
 
             let newData = [];
-
-            for (let i = 0; i < data.length; i++) {
-                let item = data[i];
-                newData.push({
-                    id: item.id,
-                    timerLabel: item.timerLabel,
-                    timeVal: item.timeVal,
-                    originalTime: item.originalTime,
-                    isRunning: false,
-                    isExpanded: false,
-                    isComplete: item.isComplete,
-                });
+            if(data != null){
+                for (let i = 0; i < data.length; i++) {
+                    let item = data[i];
+                    newData.push({
+                        id: item.id,
+                        timerLabel: item.timerLabel,
+                        timeVal: item.timeVal,
+                        originalTime: item.originalTime,
+                        isRunning: false,
+                        isExpanded: false,
+                        isComplete: item.isComplete,
+                    });
+                }
             }
+
 
             this.setState({
                 data: newData,
@@ -160,7 +162,7 @@ export default class App extends Component {
                 <View style={styles.container}>
 
                     {
-                        this.state.data.length <= 0
+                        (this.state .data == null || (this.state.data !=null && this.state.data.length <= 0))
                         && <EmptyListData/>
                     }
 
@@ -172,6 +174,20 @@ export default class App extends Component {
                             renderItem={({item, index}) =>
                                 <TimerItemView
                                     data={item}
+                                    onPause={() => {
+                                        this.saveDataToLocal()
+                                    }}
+                                    onComplete={() => {
+                                        const {data} = this.state;
+                                        data[index].isComplete = true;
+                                        data[index].isExpanded = false;
+
+                                        this.setState({
+                                            data : data
+                                        },() => {
+                                            this.saveDataToLocal()
+                                        })
+                                    }}
                                     onDeleteItem={(id) => {
                                         const {data} = this.state
                                         data.splice(index, 1);
