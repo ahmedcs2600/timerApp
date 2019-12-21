@@ -2,7 +2,9 @@ import React, {Component} from 'react';
 import {StyleSheet, Text, TouchableOpacity, View,Image} from 'react-native';
 import LinearGradient from "react-native-linear-gradient";
 import {colors, gradientColor} from '../helper/Colors';
+import {addLeadingZeros, secondsToTime} from '../helper/utils';
 
+import BackgroundTimer from 'react-native-background-timer';
 
 const pauseIcon = require('./../assets/pause_icon.png');
 const deleteIcon = require('./../assets/delete_icon.png');
@@ -22,81 +24,68 @@ export default class TimerItemView extends Component {
     }
 
 
-    secondsToTime(secs){
-        let hours = Math.floor(secs / (60 * 60));
+    _prepareTimer () {
+        const {data} = {...this.props}
 
-        let divisor_for_minutes = secs % (60 * 60);
-        let minutes = Math.floor(divisor_for_minutes / 60);
-
-        let divisor_for_seconds = divisor_for_minutes % 60;
-        let seconds = Math.ceil(divisor_for_seconds);
-
-        let obj = {
-            "h": hours,
-            "m": minutes,
-            "s": seconds
-        };
-        return obj;
-    }
-
-
-
-    componentDidMount() {
-       const {data} = {...this.props}
-
-        let timeLeftVar = this.secondsToTime(data.timeVal);
+        let timeLeftVar = secondsToTime(data.timeVal);
         this.setState({
             time: timeLeftVar,
             seconds : data.timeVal,
             isRunning : data.isRunning
         },() => {
-
             if(data.isRunning){
                 this.startTimer()
             }
         });
     }
 
+
+
+
+    componentDidMount() {
+
+        this._prepareTimer()
+    }
+
     startTimer() {
         if (this.timer == 0 && this.state.seconds > 0) {
-            this.timer = setInterval(this.countDown, 1000);
+            this.timer = BackgroundTimer.setInterval(this.countDown, 1000);
         }
     }
 
 
     componentWillUnmount(): void {
-        clearInterval(this.timer)
+        this.clearInterval(this.timer)
+    }
+
+    clearInterval(timeoutId) {
+        BackgroundTimer.clearTimeout(timeoutId);
     }
 
     countDown() {
         const {data,onComplete} = this.props
 
+
+
         // Remove one second, set state so a re-render happens.
         let seconds = this.state.seconds - 1;
-
         data.timeVal = seconds;
 
         this.setState({
-            time: this.secondsToTime(seconds),
+            time: secondsToTime(seconds),
             seconds: seconds,
         });
 
         // Check if we're at zero.
         if (seconds == 0) {
-            clearInterval(this.timer);
+            this.clearInterval(this.timer);
             data.isComplete = true
             onComplete()
         }
     }
 
 
-    addLeadingZeros(value) {
-        value = String(value);
-        while (value.length < 2) {
-            value = '0' + value;
-        }
-        return value;
-    }
+
 
     _renderOptButton(title,icon,listener) {
         return (
@@ -122,76 +111,88 @@ export default class TimerItemView extends Component {
 
         const {isRunning} = this.state
 
-        if(data.isComplete){
+        if (data.isExpanded) {
+            if (data.isComplete) {
 
-            if (data.isExpanded){
+
                 return (
                     <View style={styles.expandContainerStyle}>
+                        {this._renderOptButton("Delete", deleteIcon, () => {
+                            onDeleteItem(data.id)
+                        })}
+
+                    </View>
+                )
+
+            }
+            else{
+                return (
+                    <View style={[styles.expandContainerStyle,{flexDirection : 'row',justifyContent:'space-between',paddingLeft : 20,paddingRight : 20}]}>
+                        {this._renderOptButton(isRunning ? "Pause" : "Resume",isRunning ? pauseIcon : playIcon ,() => {
+
+                            if(isRunning){
+                                this.clearInterval(this.timer);
+                                this.setState({
+                                    isRunning : false
+                                });
+
+                                data.isRunning = false
+
+                                onPause()
+                            }else{
+                                this.timer = 0;
+                                this.startTimer();
+                                this.setState({
+                                    isRunning : true
+                                });
+                                data.isRunning = true
+                            }
+
+
+
+
+                        })}
                         {this._renderOptButton("Delete",deleteIcon,() => {
+                            this.clearInterval(this.timer);
                             onDeleteItem(data.id)
                         })}
 
                     </View>
                 )
             }
-        }else{
-            return (
-                <View style={[styles.expandContainerStyle,{flexDirection : 'row',justifyContent:'space-between',paddingLeft : 20,paddingRight : 20}]}>
-                    {this._renderOptButton(isRunning ? "Pause" : "Resume",isRunning ? pauseIcon : playIcon ,() => {
-
-                        if(isRunning){
-                            clearInterval(this.timer);
-                            this.setState({
-                                isRunning : false
-                            });
-
-                            data.isRunning = false
-
-                            onPause()
-                        }else{
-                            this.timer = 0;
-                            this.startTimer();
-                            this.setState({
-                                isRunning : true
-                            });
-                            data.isRunning = true
-                        }
-
-
-
-
-                    })}
-                    {this._renderOptButton("Delete",deleteIcon,() => {
-                        clearInterval(this.timer);
-                        onDeleteItem(data.id)
-                    })}
-
-                </View>
-            )
         }
     }
 
+    _renderTimeValue(){
 
+        //const {data} = {...this.props}
 
+       /* if(data.isComplete){
+            return (
+                <Text style={styles.hourColor}>{data.originalTime}</Text>
+            )
+        }*/
 
+        return(
+            <Text style={styles.hourColor}>{addLeadingZeros(this.state.time.h)}:{addLeadingZeros(this.state.time.m)}:{addLeadingZeros(this.state.time.s)}</Text>
+        )
+    }
 
     render() {
 
-        const {itemListener,data} = {...this.props}
-
+        const {itemListener,data} = {...this.props};
         return (
             <TouchableOpacity onPress={() => {
-                if(data.isComplete){
-                    itemListener()
-                }
+                itemListener()
+
             }}>
 
                 <View style={styles.listItem}>
                     <LinearGradient start={{x: 0, y: 0}} end={{x: 1, y: 0}} colors={gradientColor} style={styles.rowGradientStyle}>
                         <View style={styles.rowItemStyle}>
                             <Text style={styles.titleColor}>{data.timerLabel}</Text>
-                            <Text style={styles.hourColor}>{data.isComplete ? data.originalTime :this.addLeadingZeros(this.state.time.h)}:{this.addLeadingZeros(this.state.time.m)}:{this.addLeadingZeros(this.state.time.s)}</Text>
-                        </View>
+                            {this._renderTimeValue()}
+                         </View>
                     </LinearGradient>
                     {this._renderExpandedView(data)}
                 </View>
@@ -212,6 +213,8 @@ const styles = StyleSheet.create({
         borderColor : colors.primaryColor,
         borderWidth : 1,
         borderRadius:20,
+
+        backgroundColor : colors.whiteColor
     },
     titleColor : {
         color : '#fff',

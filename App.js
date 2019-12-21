@@ -23,6 +23,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import {colors, gradientColor} from './src/helper/Colors';
 import EmptyListData from './src/components/EmptyListData';
 import TimerItemView from './src/components/TimerItemView';
+import {addLeadingZeros, secondsToTime} from './src/helper/utils';
 
 export default class App extends Component {
 
@@ -34,7 +35,7 @@ export default class App extends Component {
     componentWillUnmount(): void {
         console.log('calling');
 
-       this.saveDataToLocal()
+      // this.saveDataToLocal()
     }
 
     saveDataToLocal() {
@@ -57,6 +58,26 @@ export default class App extends Component {
 
         saveData(dataToSave);
     }
+
+    secondsToTime(secs){
+        let hours = Math.floor(secs / (60 * 60));
+
+        let divisor_for_minutes = secs % (60 * 60);
+        let minutes = Math.floor(divisor_for_minutes / 60);
+
+        let divisor_for_seconds = divisor_for_minutes % 60;
+        let seconds = Math.ceil(divisor_for_seconds);
+
+        let obj = {
+            "h": hours,
+            "m": minutes,
+            "s": seconds
+        };
+        return obj;
+    }
+
+
+
 
     componentDidMount(): void {
         console.log('Component Did Mound');
@@ -110,15 +131,17 @@ export default class App extends Component {
                         let id = 1;
 
                         if (tempData.length > 0) {
-                            id = tempData[0].id + 1;
+                            id = tempData[tempData.length - 1].id + 1;
                         }
 
+                        let timeObj = secondsToTime(time)
 
+                        let originalTime = addLeadingZeros(timeObj.h) + ":" + addLeadingZeros(timeObj.m) + ":" + addLeadingZeros(timeObj.s)
                         tempData.push({
                             id: id,
                             timerLabel: labelVal,
                             timeVal: time,
-                            originalTime : time,
+                            originalTime : originalTime,
                             isRunning: true,
                             isExpanded: false,
                             isComplete: false,
@@ -155,10 +178,20 @@ export default class App extends Component {
         );
     }
 
+    deleteItem = data => {
+        let allItems = [...this.state.data];
+        let filteredItems = allItems.filter(item => item.id != data.id);
+        this.setState({ data: filteredItems },() => {   this.saveDataToLocal()})
+    }
 
     render() {
         return (
             <SafeAreaView style={{flex: 1}}>
+
+                <Image
+                    style= {{flex:1,position: 'absolute' }}
+                    source={require('./src/assets/background_image.png')}
+                />
                 <View style={styles.container}>
 
                     {
@@ -189,14 +222,7 @@ export default class App extends Component {
                                         })
                                     }}
                                     onDeleteItem={(id) => {
-                                        const {data} = this.state
-                                        data.splice(index, 1);
-
-                                        this.setState({
-                                              data : data
-                                        },() => {
-                                            this.saveDataToLocal()
-                                        })
+                                        this.deleteItem(item)
                                     }}
                                     itemListener={() => {
                                         let tempData = this.state.data;
@@ -209,9 +235,8 @@ export default class App extends Component {
                                         });
                                     }}
                                 />}
-                            keyExtractor={(item, index) => index.toString()}
+                            keyExtractor={(item) => item.id.toString()}
                         />
-
 
                     }
 
